@@ -88,6 +88,13 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.Document.PDF, handle_file))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, ask))
+
+    # Remove any existing webhook before polling
+    async def remove_webhook():
+        await app.bot.delete_webhook(drop_pending_updates=True)
+    import asyncio
+    asyncio.run(remove_webhook())
+
     app.run_polling()
 
 if __name__ == "__main__":
