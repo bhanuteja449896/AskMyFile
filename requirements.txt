@@ -1,3 +1,5 @@
-PyMuPDF
-google-generativeai
 python-telegram-bot
+google-generativeai
+pymongo
+PyMuPDF
+python-dotenv
