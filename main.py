@@ -2,6 +2,8 @@ from telegram.ext import Application, MessageHandler, filters, CommandHandler
 import google.generativeai as genai
 import fitz  # PyMuPDF
 import os
+from pymongo import MongoClient
+from datetime import datetime
 
 # Set your tokens from environment variables
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -10,6 +12,12 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 # Setup Gemini
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel("gemini-1.5-flash")
+
+# MongoDB setup
+MONGO_URI = os.getenv("MONGO_URI")  # Set your MongoDB URI in environment variables
+client = MongoClient(MONGO_URI)
+db = client["askmyfile_db"]  # Database name
+questions_col = db["questions"]  # Collection name
 
 # Save uploaded file
 async def handle_file(update, context):
@@ -38,6 +46,15 @@ async def ask(update, context):
     user_question = update.message.text
     file_text = context.user_data.get("file_text", "")
 
+    # Log question to MongoDB
+    questions_col.insert_one({
+        "user_id": update.effective_user.id,  # Unique and permanent
+        "username": update.effective_user.username,  # May be None or change
+        "full_name": update.effective_user.full_name,  # Store their current display name
+        "question": user_question,
+        "timestamp": datetime.utcnow()
+    })
+
     if not file_text:
         await update.message.reply_text("Please upload a file first.")
         return
@@ -48,7 +65,12 @@ async def ask(update, context):
 
 # Start command
 async def start(update, context):
-    await update.message.reply_text("Send me a PDF and ask me anything from it!")
+    await update.message.reply_text(
+        "Welcome! Please upload a PDF file. I can answer questions using only the information found in your uploaded document."
+    )
+    await update.message.reply_text(
+        "After uploading, ask questions that can be answered from the file's content. I will only use the data in your PDF to reply."
+    )
 
 # Run the bot
 def main():
