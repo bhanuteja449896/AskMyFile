@@ -46,14 +46,24 @@ async def ask(update, context):
     user_question = update.message.text
     file_text = context.user_data.get("file_text", "")
 
-    # Log question to MongoDB
-    questions_col.insert_one({
-        "user_id": update.effective_user.id,  # Unique and permanent
-        "username": update.effective_user.username,  # May be None or change
-        "full_name": update.effective_user.full_name,  # Store their current display name
-        "question": user_question,
-        "timestamp": datetime.utcnow()
-    })
+    # Upsert user document and append question to prompts list
+    questions_col.update_one(
+        {"user_id": update.effective_user.id},
+        {
+            "$set": {
+                "user_id": update.effective_user.id,
+                "username": update.effective_user.username,
+                "full_name": update.effective_user.full_name,
+            },
+            "$push": {
+                "prompts": {
+                    "question": user_question,
+                    "timestamp": datetime.utcnow()
+                }
+            }
+        },
+        upsert=True
+    )
 
     if not file_text:
         await update.message.reply_text("Please upload a file first.")
@@ -66,7 +76,7 @@ async def ask(update, context):
 # Start command
 async def start(update, context):
     await update.message.reply_text(
-        "Welcome! Please upload a PDF file. I can answer questions using only the information found in your uploaded document."
+        "Welcome! I'm Bhanu Teja's AskMyFileBot. Please upload a PDF file. I can answer questions using only the information found in your uploaded document."
     )
     await update.message.reply_text(
         "After uploading, ask questions that can be answered from the file's content. I will only use the data in your PDF to reply."
