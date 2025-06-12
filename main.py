@@ -4,6 +4,8 @@ import fitz  # PyMuPDF
 import os
 from pymongo import MongoClient
 from datetime import datetime
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 # Set your tokens from environment variables
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -82,8 +84,25 @@ async def start(update, context):
         "After uploading, ask questions that can be answered from the file's content. I will only use the data in your PDF to reply."
     )
 
+# Health check HTTP server for deployment environments
+def run_health_check_server():
+    port = int(os.environ.get("PORT", 8080))
+    class HealthHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"OK")
+        def log_message(self, format, *args):
+            return  # Silence HTTP server logs
+
+    httpd = HTTPServer(("0.0.0.0", port), HealthHandler)
+    httpd.serve_forever()
+
 # Run the bot
 def main():
+    # Start HTTP health check server in background thread
+    threading.Thread(target=run_health_check_server, daemon=True).start()
+
     async def remove_webhook(app):
         await app.bot.delete_webhook(drop_pending_updates=True)
 
