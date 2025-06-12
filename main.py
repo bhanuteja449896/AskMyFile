@@ -3,20 +3,18 @@ import google.generativeai as genai
 import fitz  # PyMuPDF
 import os
 from pymongo import MongoClient
-from datetime import datetime
-import threading
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from datetime import datetime, timezone
 
 # Set your tokens from environment variables
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+TELEGRAM_TOKEN = "8068188037:AAHG-Qp0nvcmOfiQjgmguwV2l32-TepJyHY"
+GEMINI_API_KEY = "AIzaSyCKJPU_4erpvijeTbnuNMHoImmfZCu9PfA"
 
 # Setup Gemini
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel("gemini-1.5-flash")
 
 # MongoDB setup
-MONGO_URI = os.getenv("MONGO_URI")  # Set your MongoDB URI in environment variables
+MONGO_URI = "mongodb+srv://bhanutejamakkineni:teja449896@cluster0.ztiqikb.mongodb.net/"  # Set your MongoDB URI in environment variables
 client = MongoClient(MONGO_URI)
 db = client["askmyfile_db"]  # Database name
 questions_col = db["questions"]  # Collection name
@@ -60,7 +58,7 @@ async def ask(update, context):
             "$push": {
                 "prompts": {
                     "question": user_question,
-                    "timestamp": datetime.utcnow()
+                    "timestamp": datetime.now(timezone.utc)
                 }
             }
         },
@@ -84,25 +82,8 @@ async def start(update, context):
         "After uploading, ask questions that can be answered from the file's content. I will only use the data in your PDF to reply."
     )
 
-# Health check HTTP server for deployment environments
-def run_health_check_server():
-    port = int(os.environ.get("PORT", 8080))
-    class HealthHandler(BaseHTTPRequestHandler):
-        def do_GET(self):
-            self.send_response(200)
-            self.end_headers()
-            self.wfile.write(b"OK")
-        def log_message(self, format, *args):
-            return  # Silence HTTP server logs
-
-    httpd = HTTPServer(("0.0.0.0", port), HealthHandler)
-    httpd.serve_forever()
-
 # Run the bot
 def main():
-    # Start HTTP health check server in background thread
-    threading.Thread(target=run_health_check_server, daemon=True).start()
-
     async def remove_webhook(app):
         await app.bot.delete_webhook(drop_pending_updates=True)
 
@@ -110,6 +91,8 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.Document.PDF, handle_file))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, ask))
+
+    print("Server is running...")  # This will print to your console/logs
 
     app.run_polling()
 
