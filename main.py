@@ -1,20 +1,20 @@
+import os
 from telegram.ext import Application, MessageHandler, filters, CommandHandler
 import google.generativeai as genai
 import fitz  # PyMuPDF
-import os
 from pymongo import MongoClient
 from datetime import datetime, timezone
 
-# Set your tokens from environment variables
-TELEGRAM_TOKEN = "8068188037:AAHG-Qp0nvcmOfiQjgmguwV2l32-TepJyHY"
-GEMINI_API_KEY = "AIzaSyCKJPU_4erpvijeTbnuNMHoImmfZCu9PfA"
+# Get your tokens and keys from environment variables
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+MONGO_URI = os.getenv("MONGO_URI")
 
 # Setup Gemini
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel("gemini-1.5-flash")
 
 # MongoDB setup
-MONGO_URI = "mongodb+srv://bhanutejamakkineni:teja449896@cluster0.ztiqikb.mongodb.net/"  # Set your MongoDB URI in environment variables
 client = MongoClient(MONGO_URI)
 db = client["askmyfile_db"]  # Database name
 questions_col = db["questions"]  # Collection name
